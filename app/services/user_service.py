@@ -14,6 +14,9 @@ class UserService:
     def list_users(self, page: int, limit: int):
         return self.repository.list_users(page=page, limit=limit)
 
+    def get_referral_code_stats(self):
+        return self.repository.get_referral_code_stats()
+
     def create_user(self, payload: UserCreate):
         duplicate_field = self.repository.find_duplicate_field(
             email=payload.email,

@@ -7,6 +7,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, model_val
 from app.schemas.api import ApiResponse, PaginatedApiResponse
 
 
+UNKNOWN_REFERRAL_CODE = "Unknown"
+
+
 def normalize_email_value(value: str | None) -> str | None:
     if value is None:
         return None
@@ -38,7 +41,7 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = None
     referral_code: Optional[str] = None
 
-    @field_validator("phone_number", "full_name", "referral_code", mode="before")
+    @field_validator("phone_number", "full_name", mode="before")
     @classmethod
     def normalize_optional_text(cls, value):
         if value is None:
@@ -46,6 +49,16 @@ class UserCreate(BaseModel):
         if isinstance(value, str):
             cleaned = value.strip()
             return cleaned or None
+        return value
+
+    @field_validator("referral_code", mode="before")
+    @classmethod
+    def normalize_referral_code(cls, value):
+        if value is None:
+            return UNKNOWN_REFERRAL_CODE
+        if isinstance(value, str):
+            cleaned = value.strip()
+            return cleaned or UNKNOWN_REFERRAL_CODE
         return value
 
     @field_validator("email", mode="before")
@@ -78,9 +91,18 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ReferralCodeStats(BaseModel):
+    referral_code: str
+    total_users: int
+
+
 class UserSingleApiResponse(ApiResponse[UserResponse]):
     pass
 
 
 class UserListApiResponse(PaginatedApiResponse[UserResponse]):
+    pass
+
+
+class ReferralCodeStatsApiResponse(ApiResponse[list[ReferralCodeStats]]):
     pass

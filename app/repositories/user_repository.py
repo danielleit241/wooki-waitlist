@@ -1,10 +1,11 @@
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.models import User, UserStatus
 from app.schemas import UserCreate
-from app.schemas.user import normalize_email_value, normalize_phone_number_value
+from app.schemas.user import UNKNOWN_REFERRAL_CODE, normalize_email_value, normalize_phone_number_value
 
 
 class UserRepository:
@@ -67,3 +68,17 @@ class UserRepository:
     def delete_user(self, user_id: UUID):
         self.db.query(User).filter(User.id == user_id, User.is_active.is_(True)).update({"is_active": False})
         self.db.commit()
+
+    def get_referral_code_stats(self) -> list[tuple[str, int]]:
+        normalized_referral_code = func.coalesce(
+            func.nullif(func.trim(User.referral_code), ""),
+            UNKNOWN_REFERRAL_CODE,
+        )
+        rows = (
+            self.db.query(normalized_referral_code, func.count(User.id))
+            .filter(User.is_active.is_(True))
+            .group_by(normalized_referral_code)
+            .order_by(func.count(User.id).desc(), normalized_referral_code.asc())
+            .all()
+        )
+        return [(referral_code, total_users) for referral_code, total_users in rows]

@@ -6,7 +6,14 @@ from app.config import settings
 from app.database import get_db
 from app.middleware import verify_api_key
 from app.schemas.api import PaginationInfo
-from app.schemas.user import UserCreate, UserListApiResponse, UserSingleApiResponse, UserResponse
+from app.schemas.user import (
+    ReferralCodeStats,
+    ReferralCodeStatsApiResponse,
+    UserCreate,
+    UserListApiResponse,
+    UserSingleApiResponse,
+    UserResponse,
+)
 from app.services.user_service import UserService
 
 router = APIRouter(
@@ -29,6 +36,20 @@ def get_users(
         message="Lấy dữ liệu thành công",
         data=[UserResponse.model_validate(user) for user in users],
         pagination=PaginationInfo.build(page=page, limit=limit, total_items=total_items),
+        metadata=None,
+    )
+
+
+@router.get("/referral-stats", response_model=ReferralCodeStatsApiResponse, dependencies=[Depends(verify_api_key)])
+def get_referral_code_stats(service: UserService = Depends(get_user_service)):
+    stats = service.get_referral_code_stats()
+    return ReferralCodeStatsApiResponse(
+        success=True,
+        message="Lấy thống kê referral_code thành công",
+        data=[
+            ReferralCodeStats(referral_code=referral_code, total_users=total_users)
+            for referral_code, total_users in stats
+        ],
         metadata=None,
     )
 
